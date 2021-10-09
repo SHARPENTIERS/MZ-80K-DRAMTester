@@ -1,0 +1,2 @@
+mzdrawgen.exe DRAMTester
+pause

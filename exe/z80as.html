@@ -1,0 +1,361 @@
+
+<html>
+
+        <head><title>Z80 Abusolute Assembler 'Z80AS'</title>
+        </head>
+
+        <body>
+
+        <H1>Z80 Absolute Assembler 'Z80AS'</H1>
+        <P>　Z80AS.EXE は Win32 コンソール上で動作する Z80用のクロスアセンブラです。
+
+        <HR>
+        <H2><FONT COLOR="#CCCCFF">■</FONT>使い方</H2>
+        <P>　Z80AS [&lt;オプション&gt;] &lt;入力ファイル&gt; [, &lt;入力ファイル&gt; ...]
+        <P>　&lt;入力ファイル&gt; をアセンブルしてバイナリファイルを出力します。デフォルトではヘッダなどのついていない生のバイナリを出力するようになっています。出力形式はオプションで変更することができます。<BR>
+        　&lt;入力ファイル&gt; を複数指定することもできます。ただし、Cコンパイラなどと違いラベルの名前空間がファイルごとに分割されていないため、ラベルの命名には注意が必要です。
+
+        <H3><FONT COLOR="#CCCCFF">■</FONT>オプション</H3>
+        <DL>
+        <DT><B>-o &lt;出力ファイル&gt;</B></DT>
+        <DD>出力するファイル名を指定します。このオプションを指定しない場合、デフォルトの出力ファイル名は入力ファイルの拡張子を ".BIN"(または指定した出力形式のデフォルトの拡張子) に変更したものになります。</DD>
+        <DT><BR><B>-m &lt;テープイメージ内のファイル名&gt;</B></DT>
+        <DD>MZT形式のテープファイルイメージを出力します。出力するファイル名は、入力ファイルの拡張子を ".MZT" に変更したものになります。<BR>
+        ソースファイル内の ORG擬似命令で指定したアドレスがロードアドレスに、END擬似命令で指定したアドレス（なければロードアドレスと同じアドレス）が実行アドレスに設定されます。<BR>
+        &lt;テープイメージ内のファイル名&gt; に英小文字を使用すると、互換モニタ上では正しく表示されないようです。<BR>
+        &lt;テープイメージ内のファイル名&gt; に空白文字を含めたいときは、ダブルクォートで囲んでください。
+        </DD>
+        <DT><BR><B>-2 &lt;IPL起動するプログラム名&gt;</B></DT>
+        <DD>簡易的にMZ-2000用のD88ディスクイメージ形式(2D)のファイルを出力します。出力するファイル名は、入力ファイルの拡張子を ".d88" に変更したものになります。<BR>
+        MZ-2000用のIPL起動のプログラムは、メインメモリの0000hにロード・実行される形式で作成する必要があります。<BR>
+        バイナリ本体はセクタ番号30hから連続して格納されます。
+        </DD>
+        <DT><BR><B>-8</B></DT>
+        <DD>バイナリにIPLを付加し、簡易的にPC-8801用のD88ディスクイメージ形式(2D)のファイルを出力します。出力するファイル名は、入力ファイルの拡張子を ".d88" に変更したものになります。<BR>
+        0000h～EFFFhの範囲のメインメモリにバイナリをロードして実行することを想定しています。実行開始時、0000h～7FFFhはメインRAMになっています。<BR>
+        ソースファイル内の ORG擬似命令で指定したアドレスがロードアドレスに、END擬似命令で指定したアドレス（なければロードアドレスと同じアドレス）が実行アドレスに設定されます。<BR>
+        バイナリ本体はトラック1・セクタ1から連続して格納されます。
+        </DD>
+        <DT><BR><B>-i</B></DT>
+        <DD>Intel HEX形式のファイルを出力します。出力するファイル名は、入力ファイルの拡張子を ".HEX" に変更したものになります。</DD>
+        <DT><BR><B>-l<BR>-l:&lt;フィルタ文字列&gt;</B></DT>
+        <DD>ラベルとその値をリストファイルに出力します。出力するファイル名は、入力ファイルの拡張子を ".lst" に変更したものになります。<BR>
+        コロンの後に&lt;フィルタ文字列&gt;を指定すると、ラベル名の先頭が&lt;フィルタ文字列&gt;と一致するもののみ出力します。</DD>
+        <DT><BR><B>-x</B></DT>
+        <DD>アセンブルリストを出力します。出力するファイル名は、入力ファイルの拡張子を ".als" に変更したものになります。</DD>
+        <DT><BR><B>-D&lt;ラベル名&gt;=&lt;値&gt;</B></DT>
+        <DD>アセンブル開始前に、ラベルに値を定義します。</DD>
+        <DT><BR><B>-T</B></DT>
+        <DD>MZTファイルの生成時に、配置されるアドレスがD000hを超えるようなバイナリが出来る場合、D000h以降を "D000.bin" というファイルに分割して出力します。"D000.bin" を2段ロードの1段目のプログラムに BINCLUDE するなどして利用できます。</DD>
+        <DT><BR><B>-Y</B></DT>
+        <DD>CP/Mで標準的に使われている形式のシンボルテーブルリストを出力します。出力するファイル名は、入力ファイルの拡張子を ".sym" に変更したものになります。</DD>
+        </DL>
+
+        <HR>
+        <H2><FONT COLOR="#CCCCFF">■</FONT>ソースファイルの書式</H2>
+        <H3><FONT COLOR="#CCCCFF">■</FONT>ニーモニック</H3>
+        <P>　ニーモニックの書式は、標準的なザイログ・ニーモニックのZ80アセンブラに従います。ニーモニックおよびレジスタ名は大文字小文字を区別しません。
+        <H4><FONT COLOR="#CCCCFF">・</FONT>未定義命令</H4>
+        <UL>
+        <LI>インデックスレジスタを上位バイト/下位バイトの8ビットレジスタとして扱う未定義命令は、レジスタ名に IXH, IXL, IYH, IYL を記述します。</LI>
+        <LI>第1オペコードCB, 第2オペコード 00 110 xxx の未定義シフト命令のニーモニックは 'SLL' になっています。</LI>
+        <LI>ED 70 の未定義命令は 'IN (HL),(C)' 'IN F,(C)' 'TSTI (C)' のいずれかを記述してください。</LI>
+        <LI>ED 71 の未定義命令は 'OUT (C),0' と記述してください。</LI>
+        <LI>未定義シフト・ビット操作命令のうち、インデックスレジスタ間接の演算結果をレジスタにコピーするものについては 'LD r,' の直後に対応するシフト・ビット操作命令のニーモニックを記述してください。（例: LD A,RLC (IX+1)）</LI>
+        <LI>64180, Z280, r800 等で拡張された命令には対応していません。</LI>
+        </UL>
+        <H4><FONT COLOR="#CCCCFF">・</FONT>コンディションコードの拡張書式</H4>
+        <P>　JP, CALL, RET命令のコンディションコードにおいて、'NV', 'V' が使用できます。<BR>
+        　'NV' は 'PO' と同じ、'V' は 'PE' と同じと解釈されます。
+        <H3><FONT COLOR="#CCCCFF">■</FONT>ラベル</H3>
+        <P>　ラベルに使用できる文字は、英数字・アンダーバー'_'・'#' および '?' です。ラベルは数字で始まってはなりません。ラベルは大文字小文字が区別されます。<BR>
+        　ラベルに定義できる値は 16ビット整数値（0000h～0FFFFh）です。
+        <P>　&lt;ラベル名&gt; の後にコロン':' を置くと、現在のロケーションカウンタを値として指定の名前のラベルを定義します。
+        <P>　&lt;ラベル名&gt; の後にコロン2つ'::' を置くと、現在のロケーションカウンタを値として指定の名前のグローバルラベルを定義します。
+        <H3><FONT COLOR="#CCCCFF">■</FONT>即値</H3>
+        <P>　10進数、16進数、2進数およびシングルクォート''' で囲まれた文字列が使用できます。<BR>
+        　16進数は数字[0-9]で開始し、'H'で終了します。<BR>
+        　16進数には'$'または"0x"で開始する形式も使用可能です。<BR>
+        　2進数は 'B'で終了します。<BR>
+        　数値中にはアンダーバー'_'を区切り記号として記述できます。アンダーバー'_'は単に無視されます。
+        <BLOCKQUOTE><PRE><TT>例) LD      HL, 0D000H
+            AND     0011_0101B</TT></PRE></BLOCKQUOTE>
+        <P>　シングルクォートで囲んだ文字列は、一番右の文字が最下位バイトとなります。<BR>
+        　32ビットまで有効です。
+        <BLOCKQUOTE>例) <TT>'ABC' == 00414243H</TT></BLOCKQUOTE>
+        <H3><FONT COLOR="#CCCCFF">■</FONT>式</H3>
+        <P>　Z80AS では、即値やアドレスを指定する箇所に式を使用することができます。使用できる演算子と優先順位は、下の表のとおりです。
+        <BLOCKQUOTE><TABLE BORDER=1>
+        <TR BGCOLOR="#CCCCFF"><TH>優先順位</TH><TH>演算子</TH><TH>備考</TH></TR>
+        <TR><TD>1</TD><TD>()</TD><TD>括弧内</TD></TR>
+        <TR><TD>2</TD><TD>+ - ! ~</TD><TD>正記号 負記号 論理NOT ビット反転</TD></TR>
+        <TR><TD>3</TD><TD>* / %</TD><TD>乗算 除算 剰余</TD></TR>
+        <TR><TD>4</TD><TD>+ -</TD><TD>加算 減算</TD></TR>
+        <TR><TD>5</TD><TD>&lt;&lt; &gt;&gt;</TD><TD>左シフト 右シフト</TD></TR>
+        <TR><TD>6</TD><TD>&lt; &lt;= &gt; &gt;=</TD><TD>算術比較</TD></TR>
+        <TR><TD>7</TD><TD>== !=</TD><TD>算術比較</TD></TR>
+        <TR><TD>8</TD><TD>&</TD><TD>ビットAND</TD></TR>
+        <TR><TD>9</TD><TD>^</TD><TD>ビットXOR</TD></TR>
+        <TR><TD>10</TD><TD>|</TD><TD>ビットOR</TD></TR>
+        <TR><TD>11</TD><TD>&&</TD><TD>論理AND</TD></TR>
+        <TR><TD>12</TD><TD>||</TD><TD>論理OR</TD></TR>
+        <TR><TD>13</TD><TD>:</TD><TD>8ビット整数値2つを16ビット整数値1つに合成</TD></TR>
+        </TABLE></BLOCKQUOTE>
+        <H4><FONT COLOR="#CCCCFF">・</FONT>コロン演算子 ':'</H4>
+        <P>　コロン演算子 ':' は、8ビット整数値2つを16ビット整数値1つに合成します。<BR>
+        　x:y は ((x << 8) | y) と同値です。
+        <H4><FONT COLOR="#CCCCFF">・</FONT>メモリアドレッシングモードに関する注意</H4>
+        <P>　標準的なザイログ・ニーモニックでは括弧 '(' ')' を使ってメモリアドレッシングモードを指定します。Z80AS では式の優先順位を変えるためにも同じ括弧を使用しているため、表記が曖昧になる場合があります。オペランドの式全体が括弧でくくられている場合、メモリアドレッシングモードが指定されたものとみなします。メモリアドレッシングモードが指定できないオペランドでは、式全体が括弧でくくられていても即値とみなします。
+        <BLOCKQUOTE><TABLE BORDER=1>
+        <TR BGCOLOR="#CCCCFF"><TH>ソース</TH><TH>アセンブル結果</TH></TR>
+        <TR><TD><TT>LD A,(1+2)*3</TT></TD><TD><TT>3E 06</TT></TD></TR>
+        <TR><TD><TT>LD A,((1+2)*3)</TT></TD><TD><TT>3A 06 00</TT></TD></TR>
+        <TR><TD><TT>LD A,(1+2)*(3+4)</TT></TD><TD><TT>3E 15</TT></TD></TR>
+        <TR><TD><TT>LD B,((1+2)*3)</TT></TD><TD><TT>06 06</TT></TD></TR>
+        </TABLE></BLOCKQUOTE>
+        <H3><FONT COLOR="#CCCCFF">■</FONT>コメント</H3>
+        <P>　';' 以降の行末まではコメントとみなされ、無視されます。
+        <H3><FONT COLOR="#CCCCFF">■</FONT>ロケーションカウンタ</H3>
+        <P>　'$' で現在のロケーションカウンタを参照することができます。オペランド中で参照した場合は、アセンブル中の命令の先頭アドレスを返します。
+        <BLOCKQUOTE><TABLE BORDER=1><TR BGCOLOR="#CCCCFF"><TH>例</TH></TR><TR><TD><PRE><TT>        ORG     0100H
+                LD      HL, $      ; 21 00 01
+                JR      $          ; 18 FE</TT></PRE></TD></TR></TABLE></BLOCKQUOTE>
+
+        <H3><FONT COLOR="#CCCCFF">■</FONT>ローカルラベル</H3>
+        <P>　@@ および @0 ～ @9 の11個のローカルラベルを定義することができます。<BR>
+        　@b および @0b ～ @9b で直前の @@ および @0 ～ @9 を参照します。<BR>
+        　@f および @0f ～ @9f で直後の @@ および @0 ～ @9 を参照します。
+        <BLOCKQUOTE>
+        <TABLE BORDER=1>
+        <TR BGCOLOR="#CCCCFF"><TH>ローカルラベルの使用例</TH></TR>
+        <TR><TD>
+        <PRE><TT>
+        @1:     LD      A, (HL)
+                CP      'A'
+                JR      C, @f
+                CP      'F'+1
+                JR      NC, @1f
+        @@:     INC     HL
+                DJNZ    @1b
+        @1:
+        </TT></PRE>
+        </TD></TR>
+        </TABLE>
+        </BLOCKQUOTE>
+
+        <!--
+        <H3>ラベルの定義チェック</H3>
+        <P>　DEFINED(&lt;ラベル名&gt;) を使ってラベルが定義されているかどうかのチェックを行うことができます。&lt;ラベル名&gt;が定義済みであれば 1 を、そうでなければ 0 を返します。
+        <BLOCKQUOTE>例) <TT>IF DEFINED(LABEL1) && DEFINED(LABEL2)</TT></BLOCKQUOTE>
+        -->
+
+        <H3><FONT COLOR="#CCCCFF">■</FONT>擬似命令</H3>
+        <BLOCKQUOTE><DL>
+        <DT><B>ORG</B> &lt;式&gt;</DT>
+        <DD>ロケーションカウンタの値を&lt;式&gt;に変更します。&lt;式&gt;は評価時に決定されていなければなりません。<BR>
+        ソースファイル内で最初に記述されたORG擬似命令の &lt;式&gt; の値がロードアドレスとして使用されます（出力形式によってはロードアドレスの設定は無効です）。</DD>
+        <DT><BR><B>END</B> [&lt;式&gt;]</DT>
+        <DD>このソースファイルのアセンブルを終了します。&lt;式&gt;が指定された場合、&lt;式&gt;を実行開始アドレスとして設定します（出力形式によっては実行開始アドレスの設定は無効です）。</DD>
+        <DT><BR><B>DB</B> &lt;式&gt; [, &lt;式&gt; ...]</DT>
+        <!--<DT><B>DB</B> '&lt;文字列&gt;'</DT>-->
+        <DT><B>DB</B> "&lt;文字列&gt;"</DT>
+        <DT><B>DB</B> "&lt;文字列&gt;"+&lt;即値&gt;</DT>
+        <DD>&lt;式&gt;で指定されたバイト列を埋め込みます。&lt;文字列&gt;が指定された場合はアスキーコード列を埋め込みます。<BR>
+        &lt;文字列&gt;の後に +&lt;即値&gt; が指定された場合は、&lt;文字列&gt;の最後のバイトに指定した即値を加算します。</DD>
+        <DT><BR><B>DW</B> &lt;式&gt; [, &lt;式&gt; ...]</DT>
+        <DD>&lt;式&gt;で指定されたワード列を埋め込みます。</DD>
+        <DT><BR><B>DS</B> &lt;式1&gt; [, &lt;式2&gt;]</DT>
+        <DD>&lt;式1&gt;で指定されたバイト数の 0 を埋め込みます。&lt;式2&gt;が指定された場合はその値で埋めます。</DD>
+        <DT><BR><B>ALIGN</B> &lt;式&gt;</DT>
+        <DD>&lt;式&gt;で指定されたアラインメント境界までロケーションカウンタを進めます。空いた領域は 0 で埋められます。&lt;式&gt;の値は 2^n でなければなりません。</DD>
+        <DT><BR><B>INCLUDE</B> &lt;ファイル名&gt;</DT>
+        <DD>&lt;ファイル名&gt;で指定されたファイルを挿入します。</DD>
+        <DT><BR><B>BINCLUDE</B> &lt;ファイル名&gt;</DT>
+        <DD>&lt;ファイル名&gt;で指定されたバイナリファイルを読み込み、現在のロケーションに挿入します。</DD>
+        <DT><BR>&lt;ラベル名&gt; <B>EQU</B> &lt;式&gt;</DT>
+        <DD>&lt;式&gt;の値を持つラベル &lt;ラベル名&gt; を定義します。</DD>
+        <DT><BR>&lt;ラベル名&gt; <B>=</B> &lt;式&gt;</DT>
+        <DD>&lt;式&gt;の値を持つラベル &lt;ラベル名&gt; を定義します。このラベルは再度 '<B>=</B>' で定義しなおすことが可能です。<BR>
+        &lt;式&gt;は評価時に決定されていなければなりません。</DD>
+        <DT><BR>&lt;マクロ名&gt; <B>MACRO</B></DT>
+        <DT><B>ENDM</B></DT>
+        <DD>マクロ &lt;マクロ名&gt; の定義を開始します。次の行から <B>ENDM</B> の置かれた行までがマクロとして定義されます。<BR>
+        引数については何も指定する必要がありません。(展開時に引数の個数などを何もチェックしないため)</DD>
+        <DT><BR><B>REPT</B> &lt;式&gt;</DT>
+        <DT><B>ENDM</B></DT>
+        <DD>次の行から <B>ENDM</B> の置かれた行までを &lt;式&gt; で指定した回数分繰り返して展開します。<BR>
+        &lt;式&gt;は評価時に決定されていなければなりません。</DD>
+        <DT><BR><B>IF</B> &lt;式&gt;</DT>
+        <DT><B>ELSE</B></DT>
+        <DT><B>ENDIF</B></DT>
+        <DD>&lt;式&gt;の値が真(0以外)のとき、IF～ELSE (ELSEがない場合は IF～ENDIF) の間をアセンブルします。<BR>
+        &lt;式&gt;の値が偽(0)のときは、ELSE～ENDIF の間をアセンブルします。<BR>
+        &lt;式&gt;は評価時に決定されていなければなりません。<BR>
+        </DD>
+        <DT><BR><B>OFFSET</B> [&lt;式&gt;]</DT>
+        <DD>一時的にロケーションカウンタの値を&lt;式&gt;に変更し、<B>END</B> が出現するまでの間、バイナリを生成せずにロケーションカウンタだけを進めます。<BR>
+        構造体のメンバへのオフセット値をラベルに定義するために使用できます。<BR>
+        &lt;式&gt;が省略された場合は 0 を指定したものとみなします。&lt;式&gt;は評価時に決定されていなければなりません。</DD>
+        <DT><BR><B>ERROR</B> "&lt;文字列&gt;"</DT>
+        <DD>文字列をエラーとして出力し、アセンブルを終了します。</DD>
+        <DT><BR>[&lt;ラベル名&gt;] <B>PROC</B></DT>
+        <DT><B>ENDP</B></DT>
+        <DD><B>PROC</B>～<B>ENDP</B>の範囲を独立した名前空間に分離します。<BR>
+        &lt;ラベル名&gt; が指定された場合は、新しい名前空間を作る前に、現在のロケーションカウンタを値としてラベルを定義します。<BR>
+        <B>PROC</B>～<B>ENDP</B> は省略形式の <B>{</B>～<B>}</B> で記述することも可能です。</DD>
+        <DT><BR><B>DISPC</B> &lt;式&gt; [, &lt;式&gt; ...]</DT>
+        <!--<DT><B>DISPC</B> '&lt;文字列&gt;'</DT>-->
+        <DT><B>DISPC</B> "&lt;文字列&gt;"</DT>
+        <DD>DB 擬似命令と同様ですが、こちらは &lt;文字列&gt; のASCII文字および半角カナ文字をMZ-700のディスプレイコードに変換したバイト列を埋め込みます。英小文字は英大文字に変換されます。MZ-700のディスプレイコードに存在しない文字は正しく変換されません。<BR>
+        半角カナ文字を使う場合、ソースコードをSJISで記述する必要があります。<BR>
+        &lt;式&gt; で指定した値については変換を行いません。</DD>
+        <DT><BR><B>CHRMAP</B> "&lt;キャラクタマップ指定文字列&gt;"</DT>
+        <DD>DB擬似命令に文字列を指定したときのコード変換方法を指定します。
+         <TABLE BORDER=1>
+          <TR BGCOLOR="#CCCCFF"><TH>指定文字列</TH><TH>生成するバイト列</TH></TR>
+          <TR ALIGN=left><TH>ASCII</TH><TD>アスキーコード（デフォルト、コード変換なし）</TD></TR>
+          <TR ALIGN=left><TH>MZ-ASCII<BR>MZ-ASCII-JP</TH><TD>MZアスキーコード（05hで大文字/小文字切り替え）</TD></TR>
+          <TR ALIGN=left><TH>MZ-ASCII-EU</TH><TD>海外版MZアスキーコード</TD></TR>
+          <TR ALIGN=left><TH>DISPLAYCODE</TH><TD>ディスプレイコード</TD></TR>
+          <TR ALIGN=left><TH>DISPLAYCODE-EU</TH><TD>海外版MZディスプレイコード</TD></TR>
+          <TR ALIGN=left><TH>USER-DEFINED</TH><TD>MAPCHR擬似命令で指定した文字コードマップ</TD></TR>
+         </TABLE>
+        </DD>
+        <DT><BR><B>MAPCHR</B> &lt;文字のASCIIコード&gt;, &lt;割り当てる値&gt; [,&lt;割り当てる値&gt; ...]</DT>
+        <DD>DB擬似命令に文字列を指定したときのコード変換テーブルを作成します。作成したコード変換テーブルは、CHRMAP擬似命令で "USER-DEFINED" を指定した際に使用されます。<BR>
+        例) <TT>MAPCHR 'A', 01h, 02h, 03h　　; "ABC" を 01h,02h,03h に変換するテーブルを作る</TT>
+        </DD>
+        <DT><BR><B>ARRANGE</B> &lt;開始アドレス&gt;, &lt;配置バイト数&gt;, &lt;スキップバイト数&gt; [, &lt;配置バイト数&gt;, &lt;スキップバイト数&gt; …]</DT>
+        <DD><B>DS</B>擬似命令などで確保済みのバイナリ領域に、指定の方法でバイナリを配置（上書き）します。<B>ARRANGE</B> から <B>END</B> が出現するまでの間のバイナリに対し、指定のバイト数だけ配置し、その後指定のバイト数だけロケーションカウンタを進める、を繰り返します。</DD>
+        <DT><BR>&lt;ラベル名&gt; <B>PAGE_ALIGNED</B></DT>
+        <DD><B>PAGE_ALIGNED</B>の直後から行末まで、または直後に<B>PROC</B>～<B>ENDP</B>を記述した場合はその範囲を、256バイト境界(アドレスの下位バイトが00hになる位置)に自動配置します。範囲内のアセンブル結果は自動配置されるため、ソースコード上の記述順とバイナリ上の位置が一致しなくなりますので、ご注意ください。配置されるバイナリは256バイトを超えても問題ありませんが、256バイト以内に制限したい場合は <B>IN_PAGE</B> による指定を併用してください。</DD>
+        <DT><BR>&lt;ラベル名&gt; <B>IN_PAGE</B></DT>
+        <DD><B>IN_PAGE</B>の直後から行末まで、または直後に<B>PROC</B>～<B>ENDP</B>を記述した場合はその範囲を、256バイト境界を跨がない(アドレスの上位バイトが変化しない)ような位置に自動配置します。範囲内のアセンブル結果は自動配置されるため、ソースコード上の記述順とバイナリ上の位置が一致しなくなりますので、ご注意ください。配置されるバイナリは256バイト以内である必要があります。</DD>
+        </DL></BLOCKQUOTE>
+
+        <HR>
+        <H3><FONT COLOR="#CCCCFF">■</FONT>マクロ</H3>
+        <P>　Z80AS のマクロは単純な文字列置換で実装されています。&lt;マクロ名&gt; をソース中に書くと、定義されたマクロの内容がそのまま展開されます。&lt;マクロ名&gt; の後には、マクロに渡す引数をカンマ ',' で区切って書くことができます。マクロ定義中の引数文字列 %1 ～ %9 は、&lt;マクロ名&gt; の後の引数に置換されます。<BR>
+        マクロ中で演算子'%'を使用する場合は、後ろにスペースを置き、引数と解釈されないようにしてください。<BR>
+        　マクロは1行中に1個しか記述できません。（マクロの後ろから行末までが引数と解釈されるため）
+        <BLOCKQUOTE>
+
+        <TABLE BORDER=0 CELLPADDING=0 CELLSPACING=8>
+        <TR VALIGN=top><TD>
+
+        <TABLE BORDER=1>
+        <TR BGCOLOR="#CCCCFF"><TH>マクロ定義の例1</TH></TR>
+        <TR><TD>
+        <TT><PRE>
+         PUSHM   MACRO
+                 IF '%1' PUSH %1 ENDIF
+                 IF '%2' PUSH %2 ENDIF
+                 IF '%3' PUSH %3 ENDIF
+                 IF '%4' PUSH %4 ENDIF
+                 IF '%5' PUSH %5 ENDIF
+                 IF '%6' PUSH %6 ENDIF
+                 IF '%7' PUSH %7 ENDIF
+                 IF '%8' PUSH %8 ENDIF
+                 IF '%9' PUSH %9 ENDIF
+                 ENDM
+
+                 PUSHM   AF, BC, DE, HL
+        </PRE></TT>
+        </TD></TR>
+        <TR><TD>
+        <B>出力結果</B>
+        <TT><PRE>
+                 PUSH AF
+                 PUSH BC
+                 PUSH DE
+                 PUSH HL
+        </PRE></TT>
+        </TD></TR>
+        </TABLE>
+
+        </TD><TD>
+
+        <TABLE BORDER=1>
+        <TR BGCOLOR="#CCCCFF"><TH>マクロ定義の例2</TH></TR>
+        <TR><TD>
+        <TT><PRE>
+         MLT     MACRO
+                 IF '%1' == 'BC' DB 0EDh,4Ch ENDIF
+                 IF '%1' == 'DE' DB 0EDh,5Ch ENDIF
+                 IF '%1' == 'HL' DB 0EDh,6Ch ENDIF
+                 IF '%1' == 'SP' DB 0EDh,7Ch ENDIF
+                 ENDM
+
+                 MLT     HL
+        </PRE></TT>
+        </TD></TR>
+        <TR><TD>
+        <B>出力結果</B>
+        <TT><PRE>
+                 DB 0EDh,6Ch
+        </PRE></TT>
+        </TD></TR>
+        </TABLE>
+
+        </TD></TR>
+        </TABLE>
+
+        </BLOCKQUOTE>
+
+        <HR>
+        <H3><FONT COLOR="#CCCCFF">■</FONT>IN_PAGE, PAGE_ALIGNED擬似命令の使用例</H3>
+        <BLOCKQUOTE>
+
+        <TABLE BORDER=1>
+        <TR BGCOLOR="#CCCCFF"><TH>IN_PAGE, PAGE_ALIGNED擬似命令の使用例</TH></TR>
+        <TR><TD>
+        <TT><PRE>
+         0000                    	ORG	1280h
+         1280
+         1280    3E 02           	LD	A, 2
+         1282    CD 03 13        	CALL	table_jump
+         1285    C9              	RET
+         1286
+         1300                    jump_table PAGE_ALIGNED IN_PAGE {   <FONT COLOR=red>; ←指定範囲を256バイト境界から配置し、</FONT>
+         1300    08              	DB	routine_a            <FONT COLOR=red>;   かつ256バイト以内に納めるため、</FONT>
+         1301    0B              	DB	routine_b            <FONT COLOR=red>;   <B>PAGE_ALIGNED</B> と <B>IN_PAGE</B> を指定</FONT>
+         1302    0E              	DB	routine_c
+         1303
+         1303                    table_jump::                        <FONT COLOR=red>; ←<B>{ }</B> で囲んだ範囲は名前空間が分離されるため、</FONT>
+         1303    26 13           	LD	H, jump_table >> 8   <FONT COLOR=red>;   <B>::</B>を使ってグローバルラベルを定義</FONT>
+         1305    6F              	LD	L, A
+         1306    6E              	LD	L, (HL)
+         1307    E9              	JP	(HL)
+         1308
+         1308                    routine_a:
+         1308    14              	INC	D
+         1309    1C              	INC	E
+         130A    C9              	RET
+         130B
+         130B                    routine_b:
+         130B    15              	DEC	D
+         130C    1D              	DEC	E
+         130D    C9              	RET
+         130E
+         130E                    routine_c:
+         130E    15              	DEC	D
+         130F    1C              	INC	E
+         1310    C9              	RET
+         1311                    }
+         1286
+         1286    48 65 6C 6C     mes1	IN_PAGE	DB "Hello World!",0  <FONT COLOR=red>; ←<B>{ }</B> で囲まない場合、行末までが範囲となる</FONT>
+         128A    6F 20 57 6F                                         <FONT COLOR=red>;   jump_table を配置するために空けた1286h～12FFhに </FONT>
+         128E    72 6C 64 21                                         <FONT COLOR=red>;   配置されている</FONT>
+         1292    00
+         1286
+        </PRE></TT>
+        </TD></TR>
+        </TABLE>
+
+        </BLOCKQUOTE>
+
+        </body>
+
+        </html>
+
+
