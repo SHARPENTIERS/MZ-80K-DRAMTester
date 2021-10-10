@@ -232,6 +232,20 @@ check_dram_row_55_AA_RW:
 		XOR		$AA
 		OR		C
 		LD		C,A
+		DEC		HL
+		LD		(HL),$AA
+		INC		HL
+		LD		(HL),$55
+		DEC		HL
+		LD		A,(HL)
+		XOR		$AA
+		OR		C
+		LD		C,A
+		INC		HL
+		LD		A,(HL)
+		XOR		$55
+		OR		C
+		LD		C,A
 		INC		L
 		JR		NZ,@0b
 		INC		H
