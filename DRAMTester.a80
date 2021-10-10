@@ -8,15 +8,25 @@ CHRMAP			"DISPLAYCODE-EU"
 ; -----------------------------------------------------------------------------
 ; Main entry
 ; ----------
-rom_main:
+mrom_main:
 		; No interrupt
 		DI
+		LD		SP,$E000
 
-		; Draw text background
-		LD		HL,vram_background
+		; Draw text background #0
+		LD		HL,vram_background0
 		LD		DE,$D000
-		LD		BC,1000
-		LDIR
+		CALL	dzx0_standard
+
+@@:		CALL	kbd_read_space
+		JR		Z,@b
+@@:		CALL	kbd_read_space
+		JR		NZ,@b
+
+		; Draw text background #1
+		LD		HL,vram_background1
+		LD		DE,$D000
+		CALL	dzx0_standard
 
 loop:	LD		HL,$D000
 		LD		(HL),32
@@ -31,34 +41,9 @@ loop:	LD		HL,$D000
 
 		; Check DRAM chips in area $1000-$4FFF - DRAM (I)
 check_dram_1000_4FFF:
-		LD		C,0
+		LD		BC,$5000
 		LD		HL,$1000
-@0:		LD		(HL),$00
-		LD		A,(HL)
-		XOR		$00
-		OR		C
-		LD		C,A
-		LD		(HL),$55
-		LD		A,(HL)
-		XOR		$55
-		OR		C
-		LD		C,A
-		LD		(HL),$AA
-		LD		A,(HL)
-		XOR		$AA
-		OR		C
-		LD		C,A
-		LD		(HL),$FF
-		LD		A,(HL)
-		XOR		$FF
-		OR		C
-		LD		C,A
-		INC		L
-		JR		NZ,@0b
-		INC		H
-		LD		A,$50
-		CP		H
-		JR		NZ,@0b
+		CALL	check_dram_row_55_AA_RW
 
 		LD		DE,$476D ; XO
 		BIT		0,C
@@ -116,34 +101,9 @@ check_dram_1000_4FFF:
 
 		; Check DRAM chips in area $5000-$9FFF - DRAM (II)
 check_dram_5000_9FFF:
-		LD		C,0
+		LD		BC,$A000
 		LD		HL,$5000
-@0:		LD		(HL),$00
-		LD		A,(HL)
-		XOR		$00
-		OR		C
-		LD		C,A
-		LD		(HL),$55
-		LD		A,(HL)
-		XOR		$55
-		OR		C
-		LD		C,A
-		LD		(HL),$AA
-		LD		A,(HL)
-		XOR		$AA
-		OR		C
-		LD		C,A
-		LD		(HL),$FF
-		LD		A,(HL)
-		XOR		$FF
-		OR		C
-		LD		C,A
-		INC		L
-		JR		NZ,@0b
-		INC		H
-		LD		A,$A0
-		CP		H
-		JR		NZ,@0b
+		CALL	check_dram_row_55_AA_RW
 
 		LD		DE,$476D ; XO
 		BIT		0,C
@@ -201,34 +161,9 @@ check_dram_5000_9FFF:
 
 		; Check DRAM chips in area $A000-$CFFF - DRAM (III)
 check_dram_A000_CFFF:
-		LD		C,0
+		LD		BC,$D000
 		LD		HL,$A000
-@0:		LD		(HL),$00
-		LD		A,(HL)
-		XOR		$00
-		OR		C
-		LD		C,A
-		LD		(HL),$55
-		LD		A,(HL)
-		XOR		$55
-		OR		C
-		LD		C,A
-		LD		(HL),$AA
-		LD		A,(HL)
-		XOR		$AA
-		OR		C
-		LD		C,A
-		LD		(HL),$FF
-		LD		A,(HL)
-		XOR		$FF
-		OR		C
-		LD		C,A
-		INC		L
-		JR		NZ,@0b
-		INC		H
-		LD		A,$D0
-		CP		H
-		JR		NZ,@0b
+		CALL	check_dram_row_55_AA_RW
 
 		LD		DE,$476D ; XO
 		BIT		0,C
@@ -283,33 +218,112 @@ check_dram_A000_CFFF:
 
 		JP		loop
 
-vram_background:
-		DB	$00,$79,$00,$04,$12,$01,$0D,$00,$68,$09,$09,$09,$69,$00,$00,$04,$12,$01,$0D,$00,$00,$68,$09,$09,$69,$00,$00,$04,$12,$01,$0D,$00,$00,$68,$09,$69,$00,$00,$00,$00
-		DB	$78,$6E,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$00,$00,$00
-		DB	$43,$31,$79,$00,$63,$21,$27,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$29,$00,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$21,$00,$00,$00,$00,$49,$00,$1E,$04,$20,$00
-		DB	$43,$31,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$00,$00,$00
-		DB	$43,$31,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$00,$00,$00
-		DB	$43,$31,$79,$00,$63,$21,$28,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$21,$20,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$22,$00,$00,$00,$00,$49,$00,$1E,$04,$21,$00
-		DB	$43,$31,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$00,$00,$00
-		DB	$43,$31,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$00,$00,$00
-		DB	$43,$31,$79,$00,$63,$21,$29,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$21,$21,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$23,$00,$00,$00,$00,$49,$00,$1E,$04,$22,$00
-		DB	$43,$31,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$00,$00,$00
-		DB	$43,$31,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$00,$00,$00
-		DB	$43,$31,$79,$00,$63,$22,$20,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$21,$22,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$24,$00,$00,$00,$00,$49,$00,$1E,$04,$23,$00
-		DB	$43,$31,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$00,$00,$00
-		DB	$43,$31,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$00,$00,$00
-		DB	$34,$4C,$79,$00,$63,$22,$21,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$21,$23,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$25,$00,$00,$00,$00,$49,$00,$1E,$04,$24,$00
-		DB	$47,$79,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$00,$00,$00
-		DB	$00,$5E,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$00,$00,$00
-		DB	$0F,$79,$79,$00,$63,$22,$22,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$21,$24,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$26,$00,$00,$00,$00,$49,$00,$1E,$04,$25,$00
-		DB	$0B,$79,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$00,$00,$00
-		DB	$78,$5E,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$00,$00,$00
-		DB	$6D,$79,$79,$00,$63,$22,$23,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$21,$25,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$27,$00,$00,$00,$00,$49,$00,$1E,$04,$26,$00
-		DB	$00,$5E,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$00,$00,$00
-		DB	$0B,$79,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$5C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$5D,$00,$00,$00
-		DB	$0F,$79,$79,$00,$63,$22,$24,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$21,$26,$00,$00,$00,$00,$49,$00,$1E,$5E,$00,$63,$28,$00,$00,$00,$00,$49,$00,$1E,$04,$27,$00
-		DB	$78,$6E,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$1C,$78,$78,$78,$78,$78,$78,$78,$78,$78,$1D,$00,$00,$00
+check_dram_row_55_AA_RW:
+@0:		LD		(HL),$55
+		INC		HL
+		LD		(HL),$AA
+		DEC		HL
+		LD		A,(HL)
+		XOR		$55
+		OR		C
+		LD		C,A
+		INC		HL
+		LD		A,(HL)
+		XOR		$AA
+		OR		C
+		LD		C,A
+		INC		L
+		JR		NZ,@0b
+		INC		H
+		LD		A,B
+		CP		H
+		JR		NZ,@0b
+		RET
+
+kbd_read_space:
+		LD		HL,$E000		; port A to select keyboard matrix column
+		LD		DE,$E001		; port B to read keyboard matrix row
+		LD		B,$F0+4			; matrix column 4 ([SPACE] MZ-80 A)
+		LD		(HL),B			; select keyboard matrix column containing SPACE key
+		LD		A,(DE)			; read keyboard matrix row
+		CPL
+		AND		$01				; SPACE bit
+		LD		C,A
+		LD		B,$F0+9			; matrix column 9 ([SPACE] MZ-80 K)
+		LD		(HL),B			; select keyboard matrix column containing [<-/->] arrows keys
+		LD		A,(DE)			; read keyboard matrix row
+		CPL
+		AND		$02				; SPACE bit
+		OR		C
+		RET
+
+; -----------------------------------------------------------------------------
+; ZX0 decoder by Einar Saukas & Urusergi
+; "Standard" version (68 bytes only)
+; -----------------------------------------------------------------------------
+; Parameters:
+;   HL: source address (compressed data)
+;   DE: destination address (decompressing)
+; -----------------------------------------------------------------------------
+
+dzx0_standard:
+		LD		BC,$FFFF				; preserve default offset 1
+		PUSH	BC
+		INC		BC
+		LD		A,$80
+dzx0s_literals:
+		CALL	dzx0s_elias				; obtain length
+		LDIR							; copy literals
+		ADD		A,A						; copy from last offset or new offset?
+		JR		C,dzx0s_new_offset
+		CALL	dzx0s_elias				; obtain length
+dzx0s_copy:
+		EX		(SP),HL					; preserve source, restore offset
+		PUSH	HL						; preserve offset
+		ADD		HL,DE					; calculate destination - offset
+		LDIR							; copy from offset
+		POP		HL						; restore offset
+		EX		(SP),HL					; preserve offset, restore source
+		ADD		A,A						; copy from literals or new offset?
+		JR		NC,dzx0s_literals
+dzx0s_new_offset:
+		POP		BC						; discard last offset
+		LD		C,$FE					; prepare negative offset
+		CALL	dzx0s_elias_loop		; obtain offset MSB
+		INC		C
+		RET		Z						; check end marker
+		LD		B,C
+		LD		C,(HL)					; obtain offset LSB
+		INC		HL
+		RR		B						; last offset bit becomes first length bit
+		RR		C
+		PUSH	BC						; preserve new offset
+		LD		BC,1					; obtain length
+		CALL	NC,dzx0s_elias_backtrack
+		INC		BC
+		JR		dzx0s_copy
+dzx0s_elias:
+		INC		C						; interlaced Elias gamma coding
+dzx0s_elias_loop:
+		ADD		A,A
+		JR		NZ,dzx0s_elias_skip
+		LD		A,(HL)					; load another group of 8 bits
+		INC		HL
+		RLA
+dzx0s_elias_skip:
+		RET		C
+dzx0s_elias_backtrack:
+		ADD		A,A
+		RL		C
+		RL		B
+		JR		dzx0s_elias_loop
+; -----------------------------------------------------------------------------
+
+vram_background0:
+		binclude gfx/DRAMTester_screen0.zx0 
+vram_background1:
+		binclude gfx/DRAMTester_screen1.zx0 
 
 		DS	$1000 - $
 ; -----------------------------------------------------------------------------
-END	rom_main
+END	mrom_main

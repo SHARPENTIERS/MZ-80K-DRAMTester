@@ -1,2 +1,4 @@
 IPL.ROM
 IPL.als
+gfx/*.bin
+gfx/*.zx0
