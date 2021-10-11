@@ -13,38 +13,109 @@ mrom_main:
 		DI
 		LD		SP,$E000
 
-		; Draw text background #0
-		LD		HL,vram_background0
+		; Draw test screen #0
+loop:	LD		HL,vram_test_screen0
 		LD		DE,$D000
 		CALL	dzx0_standard
 
-@@:		CALL	kbd_read_space
-		JR		Z,@b
-@@:		CALL	kbd_read_space
+@@:		CALL	kbd_read_space			; wait for releasing [SPACE]
 		JR		NZ,@b
 
-		; Draw text background #1
-		LD		HL,vram_background1
+		CALL	wait_space_bar
+		
+		; Draw DRAM screen
+		LD		HL,vram_dram_screen
 		LD		DE,$D000
 		CALL	dzx0_standard
 
-loop:	LD		HL,$D000
+loop0:	LD		HL,$D000
 		LD		(HL),32
 
-		LD		HL,$E002
-		LD		A,$7F					; C = ($E002) > $7F <=> $E002.bit7 == 0
-@@:		CP		(HL)					; poll /VBLK until it becomes low (asserted)
-		JP		C,@b
-
-		LD		HL,$D000
-		INC		(HL)
+		CALL	wait_vsync
 
 		; Check DRAM chips in area $1000-$4FFF - DRAM (I)
-check_dram_1000_4FFF:
+check_dram_row_I_55_AA_RW:
+		LD		HL,$D000
+		INC		(HL)
 		LD		BC,$5000
 		LD		HL,$1000
 		CALL	check_dram_row_55_AA_RW
+		CALL	draw_dram_row_I
 
+		; Check DRAM chips in area $5000-$9FFF - DRAM (II)
+check_dram_row_II_55_AA_RW:
+		LD		HL,$D000
+		INC		(HL)
+		LD		BC,$A000
+		LD		HL,$5000
+		CALL	check_dram_row_55_AA_RW
+		CALL	draw_dram_row_II
+
+		; Check DRAM chips in area $A000-$CFFF - DRAM (III)
+check_dram_row_III_55_AA_RW:
+		LD		HL,$D000
+		INC		(HL)
+		LD		BC,$D000
+		LD		HL,$A000
+		CALL	check_dram_row_55_AA_RW
+		CALL	draw_dram_row_III
+
+@@:		CALL	kbd_read_space			; wait for pressing [SPACE] to stop looping 
+		JR		Z,loop0
+
+		; Draw test screen #1
+		LD		HL,vram_test_screen1
+		LD		DE,$D000
+		CALL	dzx0_standard
+
+@@:		CALL	kbd_read_space			; wait for releasing [SPACE]
+		JR		NZ,@b
+
+		CALL	wait_space_bar
+
+		; Draw DRAM screen
+		LD		HL,vram_dram_screen
+		LD		DE,$D000
+		CALL	dzx0_standard
+
+loop1:	LD		HL,$D000
+		LD		(HL),32
+
+		CALL	wait_vsync
+		
+		; Check DRAM chips in area $1000-$4FFF - DRAM (I)
+check_dram_row_I_March_C:
+		LD		HL,$D000
+		INC		(HL)
+		LD		BC,$5000
+		LD		HL,$1000
+		CALL	check_dram_row_Match_C  
+		CALL	draw_dram_row_I
+
+		; Check DRAM chips in area $5000-$9FFF - DRAM (II)
+check_dram_row_II_March_C:
+		LD		HL,$D000
+		INC		(HL)
+		LD		BC,$A000
+		LD		HL,$5000
+		CALL	check_dram_row_Match_C
+		CALL	draw_dram_row_II
+
+		; Check DRAM chips in area $A000-$CFFF - DRAM (III)
+check_dram_row_III_March_C:
+		LD		HL,$D000
+		INC		(HL)
+		LD		BC,$D000
+		LD		HL,$A000
+		CALL	check_dram_row_Match_C
+		CALL	draw_dram_row_III
+
+@@:		CALL	kbd_read_space			; wait for pressing [SPACE] to stop looping 
+		JR		Z,loop1
+
+		JP		loop
+
+draw_dram_row_I:
 		LD		DE,$476D ; XO
 		BIT		0,C
 		LD		HL,$D000+(2*40)+34	; BIT D0 is OK/KO
@@ -95,16 +166,9 @@ check_dram_1000_4FFF:
 		JR		Z,@7f
 		LD		A,E
 @7:		LD		(HL),A
+		RET
 
-		LD		HL,$D000
-		INC		(HL)
-
-		; Check DRAM chips in area $5000-$9FFF - DRAM (II)
-check_dram_5000_9FFF:
-		LD		BC,$A000
-		LD		HL,$5000
-		CALL	check_dram_row_55_AA_RW
-
+draw_dram_row_II:
 		LD		DE,$476D ; XO
 		BIT		0,C
 		LD		HL,$D000+(2*40)+23	; BIT D0 is OK/KO
@@ -155,16 +219,9 @@ check_dram_5000_9FFF:
 		JR		Z,@7f
 		LD		A,E
 @7:		LD		(HL),A
+		RET
 
-		LD		HL,$D000
-		INC		(HL)
-
-		; Check DRAM chips in area $A000-$CFFF - DRAM (III)
-check_dram_A000_CFFF:
-		LD		BC,$D000
-		LD		HL,$A000
-		CALL	check_dram_row_55_AA_RW
-
+draw_dram_row_III:
 		LD		DE,$476D ; XO
 		BIT		0,C
 		LD		HL,$D000+(2*40)+11	; BIT D0 is OK/KO
@@ -215,8 +272,21 @@ check_dram_A000_CFFF:
 		JR		Z,@7f
 		LD		A,E
 @7:		LD		(HL),A
+		RET
 
-		JP		loop
+wait_vsync:
+		LD		HL,$E002
+		LD		A,$7F					; C = ($E002) > $7F <=> $E002.bit7 == 0
+@@:		CP		(HL)					; poll /VBLK until it becomes low (asserted)
+		JP		C,@b
+		RET
+
+wait_space_bar:
+@@:		CALL	kbd_read_space			; wait for holding [SPACE]
+		JR		Z,@b
+@@:		CALL	kbd_read_space			; wait for releasing [SPACE]
+		JR		NZ,@b
+		RET
 
 check_dram_row_55_AA_RW:
 @0:		LD		(HL),$55
@@ -252,6 +322,10 @@ check_dram_row_55_AA_RW:
 		LD		A,B
 		CP		H
 		JR		NZ,@0b
+		RET
+
+check_dram_row_Match_C: ; TODO!!!
+		LD		C,0
 		RET
 
 kbd_read_space:
@@ -333,10 +407,12 @@ dzx0s_elias_backtrack:
 		JR		dzx0s_elias_loop
 ; -----------------------------------------------------------------------------
 
-vram_background0:
-		binclude gfx/DRAMTester_screen0.zx0 
-vram_background1:
-		binclude gfx/DRAMTester_screen1.zx0 
+vram_test_screen0:
+		binclude gfx/DRAMTester_screen0.0.zx0 
+vram_test_screen1:
+		binclude gfx/DRAMTester_screen0.1.zx0 
+vram_dram_screen:
+		binclude gfx/DRAMTester_screen1.0.zx0 
 
 		DS	$1000 - $
 ; -----------------------------------------------------------------------------
