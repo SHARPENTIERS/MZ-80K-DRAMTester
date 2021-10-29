@@ -33,7 +33,7 @@ loop0:	LD		HL,$D000
 
 		CALL	wait_vsync
 
-		; Check DRAM chips in area $1000-$4FFF - DRAM (I)
+		; Check DRAM chips in area $1000-$4FFF - DRAM (I) - 16K x 8bit
 check_dram_row_I_55_AA_RW:
 		LD		HL,$D000
 		INC		(HL)
@@ -42,27 +42,38 @@ check_dram_row_I_55_AA_RW:
 		CALL	check_dram_row_55_AA_RW
 		CALL	draw_dram_row_I
 
-		; Check DRAM chips in area $5000-$9FFF - DRAM (II)
+		CALL	kbd_read_space			; wait for pressing [SPACE] to stop looping 
+		JR		NZ,exit0
+
+		CALL	wait_vsync
+
+		; Check DRAM chips in area $5000-$8FFF - DRAM (II) - 16K x 8bit
 check_dram_row_II_55_AA_RW:
 		LD		HL,$D000
 		INC		(HL)
-		LD		BC,$A000
+		LD		BC,$9000
 		LD		HL,$5000
 		CALL	check_dram_row_55_AA_RW
 		CALL	draw_dram_row_II
 
-		; Check DRAM chips in area $A000-$CFFF - DRAM (III)
+		CALL	kbd_read_space			; wait for pressing [SPACE] to stop looping 
+		JR		NZ,exit0
+
+		CALL	wait_vsync
+
+		; Check DRAM chips in area $9000-$CFFF - DRAM (III) - 16K x 8bit
 check_dram_row_III_55_AA_RW:
 		LD		HL,$D000
 		INC		(HL)
 		LD		BC,$D000
-		LD		HL,$A000
+		LD		HL,$9000
 		CALL	check_dram_row_55_AA_RW
 		CALL	draw_dram_row_III
 
-@@:		CALL	kbd_read_space			; wait for pressing [SPACE] to stop looping 
+		CALL	kbd_read_space			; wait for pressing [SPACE] to stop looping 
 		JR		Z,loop0
 
+exit0:
 		; Draw test screen #1
 		LD		HL,vram_test_screen1
 		LD		DE,$D000
@@ -92,187 +103,94 @@ check_dram_row_I_March_C:
 		CALL	check_dram_row_Match_C  
 		CALL	draw_dram_row_I
 
-		; Check DRAM chips in area $5000-$9FFF - DRAM (II)
+		CALL	kbd_read_space			; wait for pressing [SPACE] to stop looping 
+		JR		NZ,exit1
+
+		CALL	wait_vsync
+
+		; Check DRAM chips in area $5000-$8FFF - DRAM (II)
 check_dram_row_II_March_C:
 		LD		HL,$D000
 		INC		(HL)
-		LD		BC,$A000
+		LD		BC,$9000
 		LD		HL,$5000
 		CALL	check_dram_row_Match_C
 		CALL	draw_dram_row_II
 
-		; Check DRAM chips in area $A000-$CFFF - DRAM (III)
+		CALL	kbd_read_space			; wait for pressing [SPACE] to stop looping 
+		JR		NZ,exit1
+
+		CALL	wait_vsync
+
+		; Check DRAM chips in area $9000-$CFFF - DRAM (III)
 check_dram_row_III_March_C:
 		LD		HL,$D000
 		INC		(HL)
 		LD		BC,$D000
-		LD		HL,$A000
+		LD		HL,$9000
 		CALL	check_dram_row_Match_C
 		CALL	draw_dram_row_III
 
 @@:		CALL	kbd_read_space			; wait for pressing [SPACE] to stop looping 
 		JR		Z,loop1
 
+exit1:
 		JP		loop
 
-draw_dram_row_I:
-		LD		DE,$476D ; XO
+draw_dram_row:
+		; BIT D0 is OK/KO?
 		BIT		0,C
-		LD		HL,$D000+(2*40)+34	; BIT D0 is OK/KO
-		LD		A,D
-		JR		Z,@0f
-		LD		A,E
-@0:		LD		(HL),A
+		LD		HL,$D000+(2*40)
+		CALL	draw_dram_bit_state
+		; BIT D1 is OK/KO?
 		BIT		1,C
-		LD		HL,$D000+(5*40)+34	; BIT D1 is OK/KO
-		LD		A,D
-		JR		Z,@1f
-		LD		A,E
-@1:		LD		(HL),A
+		LD		HL,$D000+(5*40)
+		CALL	draw_dram_bit_state
+		; BIT D2 is OK/KO?
 		BIT		2,C
-		LD		HL,$D000+(8*40)+34	; BIT D2 is OK/KO
-		LD		A,D
-		JR		Z,@2f
-		LD		A,E
-@2:		LD		(HL),A
+		LD		HL,$D000+(8*40)
+		CALL	draw_dram_bit_state
+		; BIT D3 is OK/KO?
 		BIT		3,C
-		LD		HL,$D000+(11*40)+34	; BIT D3 is OK/KO
-		LD		A,D
-		JR		Z,@3f
-		LD		A,E
-@3:		LD		(HL),A
+		LD		HL,$D000+(11*40)
+		CALL	draw_dram_bit_state
+		; BIT D4 is OK/KO?
 		BIT		4,C
-		LD		B,$C1
-		LD		HL,$D000+(14*40)+34	; BIT D4 is OK/KO
-		LD		A,D
-		JR		Z,@4f
-		LD		A,E
-@4:		LD		(HL),A
+		LD		HL,$D000+(14*40)
+		CALL	draw_dram_bit_state
+		; BIT D5 is OK/KO?
 		BIT		5,C
-		LD		HL,$D000+(17*40)+34	; BIT D5 is OK/KO
-		LD		A,D
-		JR		Z,@5f
-		LD		A,E
-@5:		LD		(HL),A
+		LD		HL,$D000+(17*40)
+		CALL	draw_dram_bit_state
+		; BIT D6 is OK/KO?
 		BIT		6,C
-		LD		HL,$D000+(20*40)+34	; BIT D6 is OK/KO
-		LD		A,D
-		JR		Z,@6f
-		LD		A,E
-@6:		LD		(HL),A
+		LD		HL,$D000+(20*40)
+		CALL	draw_dram_bit_state
+		; BIT D7 is OK/KO?
 		BIT		7,C
-		LD		HL,$D000+(23*40)+34	; BIT D7 is OK/KO
-		LD		A,D
-		JR		Z,@7f
-		LD		A,E
-@7:		LD		(HL),A
+		LD		HL,$D000+(23*40)
+		CALL	draw_dram_bit_state
 		RET
+
+draw_dram_bit_state:
+		LD		A,$47 ; OK
+		JR		Z,@f
+		LD		A,$6D ; KO
+@@:		ADD		HL,DE
+		LD		(HL),A
+		RET
+
+draw_dram_row_I:
+		LD		DE,34
+		JP		draw_dram_row
 
 draw_dram_row_II:
-		LD		DE,$476D ; XO
-		BIT		0,C
-		LD		HL,$D000+(2*40)+23	; BIT D0 is OK/KO
-		LD		A,D
-		JR		Z,@0f
-		LD		A,E
-@0:		LD		(HL),A
-		BIT		1,C
-		LD		HL,$D000+(5*40)+23	; BIT D1 is OK/KO
-		LD		A,D
-		JR		Z,@1f
-		LD		A,E
-@1:		LD		(HL),A
-		BIT		2,C
-		LD		HL,$D000+(8*40)+23	; BIT D2 is OK/KO
-		LD		A,D
-		JR		Z,@2f
-		LD		A,E
-@2:		LD		(HL),A
-		BIT		3,C
-		LD		HL,$D000+(11*40)+23	; BIT D3 is OK/KO
-		LD		A,D
-		JR		Z,@3f
-		LD		A,E
-@3:		LD		(HL),A
-		BIT		4,C
-		LD		B,$C1
-		LD		HL,$D000+(14*40)+23	; BIT D4 is OK/KO
-		LD		A,D
-		JR		Z,@4f
-		LD		A,E
-@4:		LD		(HL),A
-		BIT		5,C
-		LD		HL,$D000+(17*40)+23	; BIT D5 is OK/KO
-		LD		A,D
-		JR		Z,@5f
-		LD		A,E
-@5:		LD		(HL),A
-		BIT		6,C
-		LD		HL,$D000+(20*40)+23	; BIT D6 is OK/KO
-		LD		A,D
-		JR		Z,@6f
-		LD		A,E
-@6:		LD		(HL),A
-		BIT		7,C
-		LD		HL,$D000+(23*40)+23	; BIT D7 is OK/KO
-		LD		A,D
-		JR		Z,@7f
-		LD		A,E
-@7:		LD		(HL),A
-		RET
+		LD		DE,23
+		JP		draw_dram_row
 
 draw_dram_row_III:
-		LD		DE,$476D ; XO
-		BIT		0,C
-		LD		HL,$D000+(2*40)+11	; BIT D0 is OK/KO
-		LD		A,D
-		JR		Z,@0f
-		LD		A,E
-@0:		LD		(HL),A
-		BIT		1,C
-		LD		HL,$D000+(5*40)+11	; BIT D1 is OK/KO
-		LD		A,D
-		JR		Z,@1f
-		LD		A,E
-@1:		LD		(HL),A
-		BIT		2,C
-		LD		HL,$D000+(8*40)+11	; BIT D2 is OK/KO
-		LD		A,D
-		JR		Z,@2f
-		LD		A,E
-@2:		LD		(HL),A
-		BIT		3,C
-		LD		HL,$D000+(11*40)+11	; BIT D3 is OK/KO
-		LD		A,D
-		JR		Z,@3f
-		LD		A,E
-@3:		LD		(HL),A
-		BIT		4,C
-		LD		B,$C1
-		LD		HL,$D000+(14*40)+11	; BIT D4 is OK/KO
-		LD		A,D
-		JR		Z,@4f
-		LD		A,E
-@4:		LD		(HL),A
-		BIT		5,C
-		LD		HL,$D000+(17*40)+11	; BIT D5 is OK/KO
-		LD		A,D
-		JR		Z,@5f
-		LD		A,E
-@5:		LD		(HL),A
-		BIT		6,C
-		LD		HL,$D000+(20*40)+11	; BIT D6 is OK/KO
-		LD		A,D
-		JR		Z,@6f
-		LD		A,E
-@6:		LD		(HL),A
-		BIT		7,C
-		LD		HL,$D000+(23*40)+11	; BIT D7 is OK/KO
-		LD		A,D
-		JR		Z,@7f
-		LD		A,E
-@7:		LD		(HL),A
-		RET
+		LD		DE,11
+		JP		draw_dram_row
 
 wait_vsync:
 		LD		HL,$E002
@@ -289,7 +207,7 @@ wait_space_bar:
 		RET
 
 check_dram_row_55_AA_RW:
-@0:		LD		(HL),$55
+@@:		LD		(HL),$55
 		INC		HL
 		LD		(HL),$AA
 		DEC		HL
@@ -316,16 +234,146 @@ check_dram_row_55_AA_RW:
 		XOR		$55
 		OR		C
 		LD		C,A
+		CALL	loopable_from_xx00_to_xxFF
+		JP		NZ,@b
+		RET
+
+check_dram_row_Match_C:
+		LD		C,0
+		LD		D,H
+		LD		E,H
+		DEC		E
+
+		; RAM clearance in the row
+@@:		LD		(HL),0
+		CALL	loopable_from_xx00_to_xxFF
+		JR		NZ,@b
+
+		LD		H,D
+		; W/R check of '1' from the address head / from LSB to MSB bits
+@@:		CALL	bitcheck_r0_w1
+		CALL	loopable_from_xx00_to_xxFF
+		JR		NZ,@b
+
+		LD		H,D
+		; W/R check of '0' from the address head / from LSB to MSB bits
+@@:		CALL	bitcheck_r1_w0
+		CALL	loopable_from_xx00_to_xxFF
+		JR		NZ,@b
+		
+		LD		H,B
+		DEC		HL ; we want the last byte address, not the end address
+		; W/R check of '1' from the address tail / from LSB to MSB bits
+@@:		CALL	bitcheck_r0_w1
+		DEC		L
+		JR		NZ,@b	; loop from xxFF to xx00 -> ends with xx00
+		CALL	bitcheck_r0_w1
+		DEC		H
+		LD		A,E
+		CP		H
+		JR		NZ,@b
+		
+		LD		H,B
+		DEC		HL ; we want the last byte address, not the end address
+		; W/R check of '0' from the address tail / from LSB to MSB bits
+@@:		CALL	bitcheck_r1_w0
+		DEC		L
+		JR		NZ,@b	; loop from xxFF to xx00 -> ends with xx00
+		CALL	bitcheck_r1_w0
+		DEC		H
+		LD		A,E
+		CP		H
+		JR		NZ,@b
+
+		LD		H,D
+		; Check bytes are all '0' in the row
+@@:		LD		A,(HL)
+		OR		C
+		CALL	loopable_from_xx00_to_xxFF
+		JR		NZ,@b
+
+		RET
+
+loopable_from_xx00_to_xxFF:
 		INC		L
-		JR		NZ,@0b
+		RET		NZ ; loop from xx00 to xxFF -> ends with xx00
 		INC		H
 		LD		A,B
 		CP		H
-		JR		NZ,@0b
 		RET
 
-check_dram_row_Match_C: ; TODO!!!
-		LD		C,0
+bitcheck_r0_w1:
+		LD		A,(HL) ; check all bits are set to "0"
+		OR		C
+		SET		0,(HL) ; set bit 0 and check bit 0 is set
+		LD		A,(HL)
+		XOR		$01
+		OR		C
+		SET		1,(HL) ; set bit 1 and check bits 0..1 are set
+		LD		A,(HL)
+		XOR		$03
+		OR		C
+		SET		2,(HL) ; set bit 2 and check bits 0..2 are set
+		LD		A,(HL)
+		XOR		$07
+		OR		C
+		SET		3,(HL) ; set bit 3 and check bits 0..3 are set
+		LD		A,(HL)
+		XOR		$0F
+		OR		C
+		SET		4,(HL) ; set bit 4 and check bits 0..4 are set
+		LD		A,(HL)
+		XOR		$1F
+		OR		C
+		SET		5,(HL) ; set bit 5 and check bits 0..5 are set
+		LD		A,(HL)
+		XOR		$3F
+		OR		C
+		SET		6,(HL) ; set bit 6 and check bits 0..6 are set
+		LD		A,(HL)
+		XOR		$7F
+		OR		C
+		SET		7,(HL) ; set bit 7 and check bits 0..7 are set
+		LD		A,(HL)
+		XOR		$FF
+		OR		C
+		RET
+
+bitcheck_r1_w0:
+		LD		A,(HL) ; check all bits are set to "1"
+		XOR		$FF
+		OR		C
+		RES		0,(HL) ; clear bit 0 and check bit 0 is cleared
+		LD		A,(HL)
+		XOR		$FE
+		OR		C
+		RES		1,(HL) ; clear bit 1 and check bits 0..1 are cleared
+		LD		A,(HL)
+		XOR		$FC
+		OR		C
+		RES		2,(HL) ; clear bit 2 and check bits 0..2 are cleared
+		LD		A,(HL)
+		XOR		$F8
+		OR		C
+		RES		3,(HL) ; clear bit 3 and check bits 0..3 are cleared
+		LD		A,(HL)
+		XOR		$F0
+		OR		C
+		RES		4,(HL) ; clear bit 4 and check bits 0..4 are cleared
+		LD		A,(HL)
+		XOR		$E0
+		OR		C
+		RES		5,(HL) ; clear bit 5 and check bits 0..5 are cleared
+		LD		A,(HL)
+		XOR		$C0
+		OR		C
+		RES		6,(HL) ; clear bit 6 and check bits 0..6 are cleared
+		LD		A,(HL)
+		XOR		$80
+		OR		C
+		RES		7,(HL) ; clear bit 7 and check bits 0..7 are cleared
+		LD		A,(HL)
+		OR		C
 		RET
 
 kbd_read_space:
