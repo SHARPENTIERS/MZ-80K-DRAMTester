@@ -9,4 +9,4 @@ Special credits to:
 
 Note that Z80AS executable is an anglisized version of the source I rebuild because it was too difficult to deal with assembly errors in Japanese language.
 
-![DRAMTester-2021-10-11_02-34-15](https://user-images.githubusercontent.com/56785/136718714-2e63d4b5-eca9-4538-b6cf-5ea9bf8051fd.gif)
+![2021-11-12_18-16-11](https://user-images.githubusercontent.com/56785/141508112-cdd551e0-9ab3-4a15-90c9-0f23c71c0c18.gif)
