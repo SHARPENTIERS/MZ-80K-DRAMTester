@@ -9,132 +9,269 @@ CHRMAP			"DISPLAYCODE-EU"
 ; Main entry
 ; ----------
 mrom_main:
+
+		; Be aware if video works it displays random screen if no Z80 or 8255 is not initialised
+
+		; Small delay before setting anything  
+		XOR		A
+@@:		DEC		A
+		JR		NZ,@b
+
 		; No interrupt
 		DI
-		LD		SP,$E000
+		LD		SP,$D800
+
+		; From here, stack operations are forbidden
+
+		; Turn sound off
+		LD		HL,$E007
+		LD		(HL),$34
+		XOR		A
+		INC		L
+		LD		(HL),A
+
+		; Initialize 8255 properly
+		LD		L,$03
+		LD		(HL),$8A				; CONTROL WORD: 10001010 (A=O B=I Chi=I Clo=O, Mode 0)
+		LD		(HL),$00|1				; PC0: V-GATE ON
+		LD		(HL),$04|1				; PC2: GREEN LED
+		LD		(HL),$06|1				; PC3: NO CMT MOTOR
+		LD		($E000),A				; Reset BLINK TIMER 555
+		NOP
+		CPL
+		LD		($E000),A
+
+		; Long wait to display video full of garbage on power up on a real machine
+		LD		BC,20
+@@:		DEC		A
+		JR		NZ,@b
+		DJNZ	@b
+		DEC		C
+		JR		NZ,@b
+		XOR		A
+		LD		(HL),A					; PC0: V-GATE OFF
+
+		; Test VRAM is working
+		LD		BC,$D800
+		LD		HL,$D000
+@@:		LD		(HL),$55
+		INC		HL
+		LD		(HL),$AA
+		DEC		HL
+		LD		A,(HL)
+		XOR		$55
+		OR		C
+		LD		C,A
+		INC		HL
+		LD		A,(HL)
+		XOR		$AA
+		OR		C
+		LD		C,A
+		DEC		HL
+		LD		(HL),$AA
+		INC		HL
+		LD		(HL),$55
+		DEC		HL
+		LD		A,(HL)
+		XOR		$AA
+		OR		C
+		LD		C,A
+		INC		HL
+		LD		A,(HL)
+		XOR		$55
+		OR		C
+		LD		C,A
+		INC		L
+		JP		NZ,@f ; loop from xx00 to xxFF -> ends with xx00
+		INC		H
+		LD		A,B
+		CP		H
+		JP		NZ,@b
+@@:		OR		A
+		JP		Z,intro 
+
+		; VRAM is not working, beep! 
+		LD		DE,12288				; Tone 330Hz
+sound:	LD		B,150					; Duration
+		LD		HL,$E004
+		LD		(HL),E
+		LD		(HL),D
+		DEC		L
+		LD		(HL),$04|0				; PC2: RED LED
+		LD		A,1						; enable sound
+		LD		L,$08
+		LD		(HL),A
+		OR		A
+@@:		DEC		A
+		JR		NZ,@b
+		DJNZ	@b
+		LD		($E008),A				; disable sound
+		LD		A,$34
+		LD		($E007),A
+		LD		L,$03
+		LD		(HL),$04|1				; PC2: GREEN LED
+		XOR		A
+		LD		B,A
+		OR		A
+@@:		DEC		A
+		JR		NZ,@b
+		DJNZ	@b
+		JR		sound
+
+		; From here, stack operations are allowed in VRAM only
+		
+intro:	LD		IX,$D000 ; Display pointer
+
+		LD		HL,$E003
+		LD		(HL),$00|1			; PC0: V-GATE ON
 
 		; Draw test screen #0
-loop:	LD		HL,vram_test_screen0
+		CALL	wait_vsync
+		LD		HL,vram_intro_screen
 		LD		DE,$D000
 		CALL	dzx0_standard
 
-@@:		CALL	kbd_read_space			; wait for releasing [SPACE]
-		JR		NZ,@b
-
 		CALL	wait_space_bar
-		
+
 		; Draw DRAM screen
+		CALL	wait_vsync
 		LD		HL,vram_dram_screen
 		LD		DE,$D000
 		CALL	dzx0_standard
 
-loop0:	LD		HL,$D000
-		LD		(HL),32
-
-		CALL	wait_vsync
+loop:	
+		; Test $00/$FF R/W -> 1~[1..3]
+		LD		A,32+1 ; "1"
+		LD		(IX+40*0),A ; 1~1
+		LD		(IX+40*2),A ; 1~1
 
 		; Check DRAM chips in area $1000-$4FFF - DRAM (I) - 16K x 8bit
-check_dram_row_I_55_AA_RW:
-		LD		HL,$D000
-		INC		(HL)
+		LD		BC,$5000
+		LD		HL,$1000
+		CALL	check_dram_row_00_FF_RW
+		CALL	wait_vsync
+		LD		DE,34
+		CALL	draw_dram_row
+
+		INC		(IX+40*2) ; 1~2
+
+		; Check DRAM chips in area $5000-$8FFF - DRAM (II) - 16K x 8bit
+		LD		BC,$9000
+		LD		HL,$5000
+		CALL	check_dram_row_00_FF_RW
+		CALL	wait_vsync
+		LD		DE,23
+		CALL	draw_dram_row
+
+		INC		(IX+40*2) ; 1~3
+
+		; Check DRAM chips in area $9000-$CFFF - DRAM (III) - 16K x 8bit
+		LD		BC,$D000
+		LD		HL,$9000
+		CALL	check_dram_row_00_FF_RW
+		CALL	wait_vsync
+		LD		DE,11
+		CALL	draw_dram_row
+
+		; Test $0F/$F0 R/W -> 2~[1..3]
+		INC		(IX+40*0)
+		LD		A,32+1 ; "1"
+		LD		(IX+40*2),A ; 2~1
+		
+		; Check DRAM chips in area $1000-$4FFF - DRAM (I) - 16K x 8bit
+		LD		BC,$5000
+		LD		HL,$1000
+		CALL	check_dram_row_0F_F0_RW
+		CALL	wait_vsync
+		LD		DE,33
+		CALL	draw_dram_row
+
+		INC		(IX+40*2) ; 2~2
+
+		; Check DRAM chips in area $5000-$8FFF - DRAM (II) - 16K x 8bit
+		LD		BC,$9000
+		LD		HL,$5000
+		CALL	check_dram_row_0F_F0_RW
+		CALL	wait_vsync
+		LD		DE,22
+		CALL	draw_dram_row
+
+		INC		(IX+40*2) ; 2~3
+
+		; Check DRAM chips in area $9000-$CFFF - DRAM (III) - 16K x 8bit
+		LD		BC,$D000
+		LD		HL,$9000
+		CALL	check_dram_row_0F_F0_RW
+		CALL	wait_vsync
+		LD		DE,10
+		CALL	draw_dram_row
+
+		; Test $55/$AA R/W -> 3~[1..3]
+		INC		(IX+40*0)
+		LD		A,32+1 ; "1"
+		LD		(IX+40*2),A ; 3~1
+		
+		; Check DRAM chips in area $1000-$4FFF - DRAM (I) - 16K x 8bit
 		LD		BC,$5000
 		LD		HL,$1000
 		CALL	check_dram_row_55_AA_RW
-		CALL	draw_dram_row_I
-
-		CALL	kbd_read_space			; wait for pressing [SPACE] to stop looping 
-		JR		NZ,exit0
-
 		CALL	wait_vsync
+		LD		DE,32
+		CALL	draw_dram_row
+
+		INC		(IX+40*2) ; 3~2
 
 		; Check DRAM chips in area $5000-$8FFF - DRAM (II) - 16K x 8bit
-check_dram_row_II_55_AA_RW:
-		LD		HL,$D000
-		INC		(HL)
 		LD		BC,$9000
 		LD		HL,$5000
 		CALL	check_dram_row_55_AA_RW
-		CALL	draw_dram_row_II
-
-		CALL	kbd_read_space			; wait for pressing [SPACE] to stop looping 
-		JR		NZ,exit0
-
 		CALL	wait_vsync
+		LD		DE,21
+		CALL	draw_dram_row
+
+		INC		(IX+40*2) ; 3~3
 
 		; Check DRAM chips in area $9000-$CFFF - DRAM (III) - 16K x 8bit
-check_dram_row_III_55_AA_RW:
-		LD		HL,$D000
-		INC		(HL)
 		LD		BC,$D000
 		LD		HL,$9000
 		CALL	check_dram_row_55_AA_RW
-		CALL	draw_dram_row_III
-
-		CALL	kbd_read_space			; wait for pressing [SPACE] to stop looping 
-		JR		Z,loop0
-
-exit0:
-		; Draw test screen #1
-		LD		HL,vram_test_screen1
-		LD		DE,$D000
-		CALL	dzx0_standard
-
-@@:		CALL	kbd_read_space			; wait for releasing [SPACE]
-		JR		NZ,@b
-
-		CALL	wait_space_bar
-
-		; Draw DRAM screen
-		LD		HL,vram_dram_screen
-		LD		DE,$D000
-		CALL	dzx0_standard
-
-loop1:	LD		HL,$D000
-		LD		(HL),32
-
 		CALL	wait_vsync
-		
+		LD		DE,9
+		CALL	draw_dram_row
+
+		; Test MARCH-C
+		INC		(IX+40*0)
+		LD		A,32+1 ; "1"
+		LD		(IX+40*2),A ; 4~1
+
 		; Check DRAM chips in area $1000-$4FFF - DRAM (I)
-check_dram_row_I_March_C:
-		LD		HL,$D000
-		INC		(HL)
 		LD		BC,$5000
 		LD		HL,$1000
 		CALL	check_dram_row_Match_C  
-		CALL	draw_dram_row_I
-
-		CALL	kbd_read_space			; wait for pressing [SPACE] to stop looping 
-		JR		NZ,exit1
-
 		CALL	wait_vsync
+		LD		DE,31
+		CALL	draw_dram_row
+
+		INC		(IX+40*2) ; 4~2
 
 		; Check DRAM chips in area $5000-$8FFF - DRAM (II)
-check_dram_row_II_March_C:
-		LD		HL,$D000
-		INC		(HL)
 		LD		BC,$9000
 		LD		HL,$5000
 		CALL	check_dram_row_Match_C
-		CALL	draw_dram_row_II
-
-		CALL	kbd_read_space			; wait for pressing [SPACE] to stop looping 
-		JR		NZ,exit1
-
 		CALL	wait_vsync
+		LD		DE,20
+		CALL	draw_dram_row
+
+		INC		(IX+40*2) ; 4~3
 
 		; Check DRAM chips in area $9000-$CFFF - DRAM (III)
-check_dram_row_III_March_C:
-		LD		HL,$D000
-		INC		(HL)
 		LD		BC,$D000
 		LD		HL,$9000
 		CALL	check_dram_row_Match_C
-		CALL	draw_dram_row_III
+		CALL	wait_vsync
+		LD		DE,8
+		CALL	draw_dram_row
 
-@@:		CALL	kbd_read_space			; wait for pressing [SPACE] to stop looping 
-		JR		Z,loop1
-
-exit1:
 		JP		loop
 
 draw_dram_row:
@@ -180,18 +317,6 @@ draw_dram_bit_state:
 		LD		(HL),A
 		RET
 
-draw_dram_row_I:
-		LD		DE,34
-		JP		draw_dram_row
-
-draw_dram_row_II:
-		LD		DE,23
-		JP		draw_dram_row
-
-draw_dram_row_III:
-		LD		DE,11
-		JP		draw_dram_row
-
 wait_vsync:
 		LD		HL,$E002
 		LD		A,$7F					; C = ($E002) > $7F <=> $E002.bit7 == 0
@@ -204,6 +329,81 @@ wait_space_bar:
 		JR		Z,@b
 @@:		CALL	kbd_read_space			; wait for releasing [SPACE]
 		JR		NZ,@b
+		RET
+
+pause:	LD		BC,$FFFF
+@0:		EX		AF,AF'
+@1:		DEC		BC
+		LD		A,B
+		OR		C
+		JR		NZ,@1b
+		EX		AF,AF'
+		DEC		A
+		JR		NZ,@0b
+		RET
+
+check_dram_row_00_FF_RW:
+@@:		LD		(HL),$00
+		INC		HL
+		LD		(HL),$FF
+		DEC		HL
+		LD		A,(HL)
+		XOR		$00
+		OR		C
+		LD		C,A
+		INC		HL
+		LD		A,(HL)
+		XOR		$FF
+		OR		C
+		LD		C,A
+		DEC		HL
+		LD		(HL),$FF
+		INC		HL
+		LD		(HL),$00
+		DEC		HL
+		LD		A,(HL)
+		XOR		$FF
+		OR		C
+		LD		C,A
+		INC		HL
+		LD		A,(HL)
+		XOR		$00
+		OR		C
+		LD		C,A
+		CALL	loopable_from_xx00_to_xxFF
+		JP		NZ,@b
+		RET
+
+check_dram_row_0F_F0_RW:
+@@:		LD		(HL),$0F
+		INC		HL
+		LD		(HL),$F0
+		DEC		HL
+		LD		A,(HL)
+		XOR		$0F
+		OR		C
+		LD		C,A
+		INC		HL
+		LD		A,(HL)
+		XOR		$F0
+		OR		C
+		LD		C,A
+		DEC		HL
+		LD		(HL),$F0
+		INC		HL
+		LD		(HL),$0F
+		DEC		HL
+		LD		A,(HL)
+		XOR		$F0
+		OR		C
+		LD		C,A
+		INC		HL
+		LD		A,(HL)
+		XOR		$0F
+		OR		C
+		LD		C,A
+		CALL	loopable_from_xx00_to_xxFF
+		JP		NZ,@b
 		RET
 
 check_dram_row_55_AA_RW:
@@ -381,12 +581,12 @@ kbd_read_space:
 		LD		DE,$E001		; port B to read keyboard matrix row
 		LD		B,$F0+4			; matrix column 4 ([SPACE] MZ-80 A)
 		LD		(HL),B			; select keyboard matrix column containing SPACE key
+		LD		B,$F0+9			; matrix column 9 ([SPACE] MZ-80 K)
 		LD		A,(DE)			; read keyboard matrix row
 		CPL
 		AND		$01				; SPACE bit
+		LD		(HL),B			; select keyboard matrix column containing SPACE key
 		LD		C,A
-		LD		B,$F0+9			; matrix column 9 ([SPACE] MZ-80 K)
-		LD		(HL),B			; select keyboard matrix column containing [<-/->] arrows keys
 		LD		A,(DE)			; read keyboard matrix row
 		CPL
 		AND		$02				; SPACE bit
@@ -447,6 +647,8 @@ dzx0s_elias_loop:
 		INC		HL
 		RLA
 dzx0s_elias_skip:
+		EX		AF,AF'
+		EX		AF,AF'
 		RET		C
 dzx0s_elias_backtrack:
 		ADD		A,A
@@ -455,12 +657,10 @@ dzx0s_elias_backtrack:
 		JR		dzx0s_elias_loop
 ; -----------------------------------------------------------------------------
 
-vram_test_screen0:
-		binclude gfx/DRAMTester_screen0.0.zx0 
-vram_test_screen1:
-		binclude gfx/DRAMTester_screen0.1.zx0 
+vram_intro_screen:
+		binclude gfx/DRAMTester_screen0.zx0 
 vram_dram_screen:
-		binclude gfx/DRAMTester_screen1.0.zx0 
+		binclude gfx/DRAMTester_screen1.zx0 
 
 		DS	$1000 - $
 ; -----------------------------------------------------------------------------
