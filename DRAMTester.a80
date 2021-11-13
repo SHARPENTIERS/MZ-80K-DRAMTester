@@ -537,6 +537,7 @@ bitcheck_r0_w1:
 		LD		A,(HL)
 		XOR		$FF
 		OR		C
+		LD		C,A
 		RET
 
 bitcheck_r1_w0:
@@ -574,6 +575,7 @@ bitcheck_r1_w0:
 		RES		7,(HL) ; clear bit 7 and check bits 0..7 are cleared
 		LD		A,(HL)
 		OR		C
+		LD		C,A
 		RET
 
 kbd_read_space:
@@ -647,8 +649,6 @@ dzx0s_elias_loop:
 		INC		HL
 		RLA
 dzx0s_elias_skip:
-		EX		AF,AF'
-		EX		AF,AF'
 		RET		C
 dzx0s_elias_backtrack:
 		ADD		A,A
